@@ -246,9 +246,8 @@ public class battleOfWitsScript : MonoBehaviour {
         }
     }
 
-    IEnumerator Timer()
-	{
-		yield return new WaitForSeconds(30f);
+    IEnumerator Timer() {
+	yield return new WaitForSeconds(30f);
         if (debating) {
             Debug.LogFormat("[Battle of Wits #{0}] Failed to finish within 30 seconds, strike!", moduleId);
             Fail();
