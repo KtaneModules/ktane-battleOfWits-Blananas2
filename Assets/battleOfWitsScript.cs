@@ -43,6 +43,7 @@ public class battleOfWitsScript : MonoBehaviour {
     bool failed = false;
     int lastSelected = -1;
     string characterPath = "";
+    int elapsed = 0;
 
     //Logging
     static int moduleIdCounter = 1;
@@ -247,10 +248,16 @@ public class battleOfWitsScript : MonoBehaviour {
     }
 
     IEnumerator Timer() {
-	yield return new WaitForSeconds(30f);
+        while (elapsed < 30 && debating) {
+            yield return new WaitForSeconds(1f);
+            elapsed += 1;
+            Debug.Log(elapsed);
+        }
         if (debating) {
             Debug.LogFormat("[Battle of Wits #{0}] Failed to finish within 30 seconds, strike!", moduleId);
             Fail();
+        } else {
+            elapsed = 0;
         }
     }
     
@@ -268,5 +275,6 @@ public class battleOfWitsScript : MonoBehaviour {
         lastSelected = -1;
         characterPath = "";
         debating = false;
+        elapsed = 0;
     }
 }
