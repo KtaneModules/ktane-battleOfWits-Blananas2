@@ -339,7 +339,7 @@ public class battleOfWitsScript : MonoBehaviour {
 			
 			for (int y = 0; y < coordinates.Length; y++)
 			{
-				Dots[Int32.Parse(coordinates[y])].OnInteract();
+				Dots[Int32.Parse(coordinates[y])-1].OnInteract();
 				yield return new WaitForSecondsRealtime(0.1f);
 			}
         }
