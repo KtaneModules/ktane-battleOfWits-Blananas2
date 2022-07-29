@@ -53,9 +53,15 @@ public class battleOfWitsScript : MonoBehaviour {
     void Awake () {
         moduleId = moduleIdCounter++;
 
-        foreach (KMSelectable Dot in Dots) {
-            Dot.OnInteract += delegate () { DotPress(Dot); return false; };
-        }
+		for (int x = 0; x < Dots.Count(); x++)
+		{
+			int Number = x;
+			Dots[Number].OnInteract += delegate
+            {
+                DotPress(Number);
+				return false;
+            };
+		}
 
         Lectern.OnInteract += delegate () { LecternPress(); return false; };
 
@@ -175,9 +181,9 @@ public class battleOfWitsScript : MonoBehaviour {
         }
     }
 
-    void DotPress(KMSelectable d) {
+    void DotPress(int d) {
         for (int p = 0; p < 36; p++) {
-            if (d == Dots[p]) {
+            if (d == p) {
                 int good = 0;
                 if (lastSelected == -1) { lastSelected = p; characterPath += chosenGrid[p]; good = 1; }
                 if (5 < lastSelected) { if (lastSelected - 6 == p) { good = 1; } }
@@ -276,5 +282,77 @@ public class battleOfWitsScript : MonoBehaviour {
         characterPath = "";
         debating = false;
         elapsed = 0;
+    }
+    
+    //twitch plays
+    #pragma warning disable 414
+    private readonly string TwitchHelpMessage = @"To start the debate, use !{0} start | To press the buttons on the grid, use !{0} press [1-36] (Must be a chain of numbers separated with a backslash. Example: !{0} press 1/2/3/4/5/6) | To submit the answer that is on the grid, use !{0} submit";
+    #pragma warning restore 414
+    
+    IEnumerator ProcessTwitchCommand(string command)
+    {
+        
+        string[] parameters = command.Split(' ');
+        if (Regex.IsMatch(command, @"^\s*start\s*$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
+        {
+			yield return null;
+            if (debating)
+			{
+				yield return "sendtochaterror The debate is already happening. Command ignored.";
+				yield break;
+			}
+			Lectern.OnInteract();
+        }
+		
+		if (Regex.IsMatch(parameters[0], @"^\s*press\s*$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
+        {
+			yield return null;
+            if (!debating)
+			{
+				yield return "sendtochaterror The debate is currently not happening. Command ignored.";
+				yield break;
+			}
+			
+			if (parameters.Length != 2)
+			{
+				yield return "sendtochaterror Parameter length invalid. Command ignored.";
+				yield break;
+			}
+			
+			string[] coordinates = parameters[1].Split('/');
+			
+			for (int x = 0; x < coordinates.Length; x++)
+			{
+				int Out;
+				if (!int.TryParse(coordinates[x], out Out))
+				{
+					yield return "sendtochaterror A number in the given command is not valid. Command ignored.";
+					yield break;
+				}
+				
+				if (Out < 1 || Out > 36)
+				{
+					yield return "sendtochaterror A number in the given command is not in range of 1-36. Command ignored.";
+					yield break;
+				}
+			}
+			
+			for (int y = 0; y < coordinates.Length; y++)
+			{
+				Dots[Int32.Parse(coordinates[y])].OnInteract();
+				yield return new WaitForSecondsRealtime(0.1f);
+			}
+        }
+		
+		if (Regex.IsMatch(command, @"^\s*submit\s*$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
+        {
+			yield return null;
+            if (!debating)
+			{
+				yield return "sendtochaterror The debate is currently not happening. Command ignored.";
+				yield break;
+			}
+			Lectern.OnInteract();
+        }
     }
 }
