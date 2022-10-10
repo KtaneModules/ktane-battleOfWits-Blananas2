@@ -14,10 +14,11 @@ MonoBehaviour:
   id: battleOfWits
   title: Battle of Wits
   author: Blananas2
-  description: 'remember to give credit to Spy for the model
-
-
-    oh yeah and camera zoom is basically a requirement'
+  description: "Sadly it\u2019s impossible to argue with an idiot so chances of winning
+    here are slim, that won\u2019t stop us from trying though.\r\n\r\nModule by Blananas2\r\nThanks
+    to TheyCallMeSpy for the lectern model\r\n\r\nModule ID: battleOfWits\r\nThe manual
+    can be found here: https://ktane.timwi.de/HTML/Battle%20of%20Wits.html\r\n\r\nOh
+    yeah Camera Zoom's basically a requirement."
   version: 
   outputFolder: build
   previewImage: {fileID: 0}
