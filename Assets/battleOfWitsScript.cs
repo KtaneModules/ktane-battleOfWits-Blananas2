@@ -46,6 +46,7 @@ public class battleOfWitsScript : MonoBehaviour
     string characterPath = "";
     int elapsed = 0;
     bool failSafe;
+    private int[][] _possiblePaths;
 
     //Logging
     static int moduleIdCounter = 1;
@@ -170,12 +171,12 @@ public class battleOfWitsScript : MonoBehaviour
             chosenNATO = "Kilo";
         }
 
-        var possiblePaths = new[] { FindValidPath(chosenGrid, seqOrange), FindValidPath(chosenGrid, seqAzure) }; //See if there is a solution for both sides
-        if (possiblePaths.Contains(null) && generationAttempts < 100)
+        _possiblePaths = new[] { FindValidPath(chosenGrid, seqOrange), FindValidPath(chosenGrid, seqAzure) }; //See if there is a solution for both sides
+        if (_possiblePaths.Any(i => i == null) && generationAttempts < 100)
         {
             goto TryAgain; //If not, choose a different grid
         }
-        else if (possiblePaths.Contains(null) && generationAttempts == 100)
+        else if (_possiblePaths.Any(i => i == null) && generationAttempts == 100)
         {
             failSafe = true;
             LecternTexts[0].text = "SEND BLAN\n OR QUINN\n A LOG. PRESS\nME TWICE TO\nSOLVE!"; //If it doesn't become valid after 100 attempts, give up!
@@ -189,8 +190,8 @@ public class battleOfWitsScript : MonoBehaviour
             Debug.LogFormat("[Battle of Wits #{0}] Your grid is {1}", moduleId, chosenNATO);
             Debug.LogFormat("<Battle of Wits #{0}> Generated after {1} attempts", moduleId, generationAttempts);
         }
-        Debug.LogFormat("[Battle of Wits #{0}] Possible orange path: {1}.", moduleId, possiblePaths[0].Select(i => GetCoord(i)).Join(", "));
-        Debug.LogFormat("[Battle of Wits #{0}] Possible azure path: {1}.", moduleId,  possiblePaths[1].Select(i => GetCoord(i)).Join(", "));
+        Debug.LogFormat("[Battle of Wits #{0}] Possible orange path: {1}.", moduleId, _possiblePaths[0].Select(i => GetCoord(i)).Join(", "));
+        Debug.LogFormat("[Battle of Wits #{0}] Possible azure path: {1}.", moduleId, _possiblePaths[1].Select(i => GetCoord(i)).Join(", "));
     }
 
     string GetCoord(int coord)
@@ -337,12 +338,12 @@ public class battleOfWitsScript : MonoBehaviour
 
     //twitch plays
 #pragma warning disable 414
-    private readonly string TwitchHelpMessage = @"To start the debate, use !{0} start | To press the buttons on the grid, use !{0} press [1-36] (Must be a chain of numbers separated with a backslash. Example: !{0} press 1/2/3/4/5/6) | To submit the answer that is on the grid, use !{0} submit";
+    private readonly string TwitchHelpMessage = @"!{0} start [Start the debate.] | !{0} press b4 urdlld [Press the buttons on the grid, then press the buttons in the directions given. e.g. b4 urdlld = b4, b3, c3, c4, b4, a4, a5] | !{0} submit [Submit the answer on the grid.]";
 #pragma warning restore 414
 
     IEnumerator ProcessTwitchCommand(string command)
     {
-
+        command = command.Trim().ToLowerInvariant();
         string[] parameters = command.Split(' ');
         if (Regex.IsMatch(command, @"^\s*start\s*$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
         {
@@ -355,46 +356,6 @@ public class battleOfWitsScript : MonoBehaviour
             Lectern.OnInteract();
         }
 
-        if (Regex.IsMatch(parameters[0], @"^\s*press\s*$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
-        {
-            yield return null;
-            if (!debating)
-            {
-                yield return "sendtochaterror The debate is currently not happening. Command ignored.";
-                yield break;
-            }
-
-            if (parameters.Length != 2)
-            {
-                yield return "sendtochaterror Parameter length invalid. Command ignored.";
-                yield break;
-            }
-
-            string[] coordinates = parameters[1].Split('/');
-
-            for (int x = 0; x < coordinates.Length; x++)
-            {
-                int Out;
-                if (!int.TryParse(coordinates[x], out Out))
-                {
-                    yield return "sendtochaterror A number in the given command is not valid. Command ignored.";
-                    yield break;
-                }
-
-                if (Out < 1 || Out > 36)
-                {
-                    yield return "sendtochaterror A number in the given command is not in range of 1-36. Command ignored.";
-                    yield break;
-                }
-            }
-
-            for (int y = 0; y < coordinates.Length; y++)
-            {
-                Dots[Int32.Parse(coordinates[y]) - 1].OnInteract();
-                yield return new WaitForSecondsRealtime(0.1f);
-            }
-        }
-
         if (Regex.IsMatch(command, @"^\s*submit\s*$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
         {
             yield return null;
@@ -405,16 +366,42 @@ public class battleOfWitsScript : MonoBehaviour
             }
             Lectern.OnInteract();
         }
-    }
 
-    struct QueueItem
-    {
-        public int Cell;
-        public int Parent;
-        public QueueItem(int cell, int parent)
+        var m = Regex.Match(command, @"^\s*(?:press\s+)(?<col>[abcdef])(?<row>[123456])(?<dirs>\s+[urdl ]+)?\s*$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        if (m.Success)
         {
-            Cell = cell;
-            Parent = parent;
+            if (!debating)
+            {
+                yield return "sendtochaterror The debate is currently not happening. Command ignored.";
+                yield break;
+            }
+            int col = "abcdef".IndexOf(m.Groups["col"].Value);
+            int row = "123456".IndexOf(m.Groups["row"].Value);
+            int pos = row * 6 + col;
+            var list = new List<int>();
+            if (m.Groups["dirs"].Success)
+            {
+                var dirString = m.Groups["dirs"].Value;
+                for (int i = 0; i < dirString.Length; i++)
+                {
+                    int ix = "urdl ".IndexOf(dirString[i]);
+                    if (ix == 0) row--;
+                    if (ix == 1) col++;
+                    if (ix == 2) row++;
+                    if (ix == 3) col--;
+                    if (col < 0 || row < 0 || col > 5 || row > 5)
+                        yield break;
+                    pos = row * 6 + col;
+                    list.Add(pos);
+                }
+            }
+            yield return null;
+            for (int i = 0; i < list.Count; i++)
+            {
+                Dots[list[i]].OnInteract();
+                yield return new WaitForSeconds(0.1f);
+            }
+            yield break;
         }
     }
 
@@ -429,12 +416,12 @@ public class battleOfWitsScript : MonoBehaviour
             yield break;
         }
         var seqStrings = new string[] { seqOrange, seqAzure };
-        var paths = new List<int>[2];
+        var paths = new int[2][];
         var grid = chosenGrid;
         for (int i = 0; i < seqStrings.Length; i++)
-            paths[i] = FindValidPath(grid, seqStrings[i]).ToList();
+            paths[i] = _possiblePaths[i];
         Lectern.OnInteract();
-        for (int i = 0; i < paths[chosenSide].Count; i++)
+        for (int i = 0; i < paths[chosenSide].Length; i++)
         {
             Dots[paths[chosenSide][i]].OnInteract();
             yield return new WaitForSeconds(0.2f);
@@ -443,7 +430,18 @@ public class battleOfWitsScript : MonoBehaviour
         yield break;
     }
 
-    private IEnumerable<int> FindValidPath(string grid, string seqString)
+    struct QueueItem
+    {
+        public int Cell;
+        public int Parent;
+        public QueueItem(int cell, int parent)
+        {
+            Cell = cell;
+            Parent = parent;
+        }
+    }
+
+    private int[] FindValidPath(string grid, string seqString)
     {
         var path = new List<int>();
         var seq = new int[seqString.Length];
@@ -469,9 +467,7 @@ public class battleOfWitsScript : MonoBehaviour
                     continue;
                 visited[qi.Cell] = qi;
                 if (qi.Cell == goal)
-                {
-                    break;
-                }
+                    goto done;
                 if (qi.Cell % 6 < 5 && !(seq.Contains(qi.Cell + 1) && qi.Cell + 1 != goal))
                     q.Enqueue(new QueueItem(qi.Cell + 1, qi.Cell));
                 if (qi.Cell % 6 > 0 && !(seq.Contains(qi.Cell - 1) && qi.Cell - 1 != goal))
@@ -481,26 +477,22 @@ public class battleOfWitsScript : MonoBehaviour
                 if (qi.Cell / 6 > 0 && !(seq.Contains(qi.Cell - 6) && qi.Cell - 6 != goal))
                     q.Enqueue(new QueueItem(qi.Cell - 6, qi.Cell));
             }
+            return null;
+            done:
             var r = goal;
             while (true)
             {
-                try
-                {
-                    var nr = visited[r];
-                    if (nr.Parent == -1)
-                        break;
-                    innerPath.Add(nr.Cell);
-                    r = nr.Parent;
-                }
-                catch (Exception)
-                {
-                    return null;
-                }
+
+                var nr = visited[r];
+                if (nr.Parent == -1)
+                    break;
+                innerPath.Add(nr.Cell);
+                r = nr.Parent;
             }
             curPos = goal;
             innerPath.Reverse();
             path.AddRange(innerPath);
         }
-        return path;
+        return path.ToArray();
     }
 }
