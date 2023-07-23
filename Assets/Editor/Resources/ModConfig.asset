@@ -21,4 +21,4 @@ MonoBehaviour:
     yeah Camera Zoom's basically a requirement."
   version: 
   outputFolder: build
-  previewImage: {fileID: 0}
+  previewImage: {fileID: 2800000, guid: c6b4a301af688ee4e818ef69eafb273c, type: 3}
