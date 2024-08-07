@@ -11,6 +11,7 @@ public class battleOfWitsScript : MonoBehaviour
 
     public KMBombInfo Bomb;
     public KMAudio Audio;
+    public KMRuleSeedable RuleSeedable;
 
     public KMSelectable Lectern;
     public TextMesh[] LecternTexts; //0 = Brown, 1 = Orange, 2 = Azure
@@ -74,6 +75,18 @@ public class battleOfWitsScript : MonoBehaviour
     // Use this for initialization
     void Start()
     {
+        var rnd = RuleSeedable.GetRNG();
+        if (rnd.Seed != 1)
+        {
+            Debug.LogFormat("[Battle of Wits #{0}] Using rule seed {1}.", moduleId, rnd.Seed);
+            for (int i = 0; i < fullGrids.Length; i++)
+            {
+                var arr = fullGrids[i].ToArray();
+                rnd.ShuffleFisherYates(arr);
+                fullGrids[i] = arr.Join("");
+            }
+        }
+
         DotGrid.SetActive(false);
         GeneratePuzzle();
     }
